@@ -1,4 +1,5 @@
 import {Socket} from "./lib/socket.js";
+import { MODULE_ID } from "./constants.js";
 
 export class BloodSplatter {
   constructor() {
@@ -7,23 +8,20 @@ export class BloodSplatter {
     this.Update();
     canvas.primary.BloodSplatter = this;
   }
+  
+  static getRandomBloodPath(max = 26) {
+    const index = Math.floor(Math.random() * max);
+    return `modules/${MODULE_ID}/bloodsplats/blood${index}.svg`;
+  }
 
   Splat(scale, color, alpha) {
     this.Cleanup();
     let scaleRandom = 0.8 + Math.random() * 0.4;
     let cachedTex =
-      PIXI.utils.TextureCache[
-        `modules/splatter/bloodsplats/blood${Math.floor(
-          Math.random() * 26
-        )}.svg`
-      ];
+      PIXI.utils.TextureCache[BloodSplatter.getRandomBloodPath()];
     let sprite = cachedTex
       ? PIXI.Sprite.from(cachedTex)
-      : PIXI.Sprite.from(
-          `modules/splatter/bloodsplats/blood${Math.floor(
-            Math.random() * 26
-          )}.svg`
-        );
+      : PIXI.Sprite.from(BloodSplatter.getRandomBloodPath());
     sprite.anchor.set(0.5, 0.5);
     sprite.scale.set(
       scale * this.scaleMulti * scaleRandom,
@@ -121,7 +119,7 @@ export class BloodSplatter {
     const euler = new THREE.Euler().setFromRotationMatrix(rotation);
     const geometry =  new DecalGeometry( intersect.object, intersect.point, euler, new THREE.Vector3(scale,scale,scale) );
     for(let i = 0; i < count; i++){
-      const sprite = `modules/splatter/bloodsplats/blood${Math.floor(Math.random() * 26)}.svg`;
+      const sprite = BloodSplatter.getRandomBloodPath();
       let material;
       if(this.decalMaterials[`${sprite}|${color}`]){
         material = this.decalMaterials[`${sprite}|${color}`];
@@ -152,21 +150,21 @@ export class BloodSplatter {
 
   Update() {
     const colorData = this.ColorStringToHexAlpha(
-      game.settings.get("splatter", "bloodColor")
+      game.settings.get(MODULE_ID, "bloodColor")
     );
     this.color = colorData?.color;
     this.alpha = colorData?.alpha;
-    this.bloodSheet = game.settings.get("splatter", "useBloodsheet");
-    this.bloodSheetData = game.settings.get("splatter", "BloodSheetData");
-    this.violence = game.settings.get("splatter", "violence");
-    this.scaleMulti = game.settings.get("splatter", "bloodsplatterScale");
-    this.wallsBlock = game.settings.get("splatter", "wallsBlockBlood");
-    this.inCombat = game.settings.get("splatter", "onlyInCombat");
-    this.cleanup = game.settings.get("splatter", "cleanup");
-    this.bloodTrail = game.settings.get("splatter", "enableBloodTrail");
+    this.bloodSheet = game.settings.get(MODULE_ID, "useBloodsheet");
+    this.bloodSheetData = game.settings.get(MODULE_ID, "BloodSheetData");
+    this.violence = game.settings.get(MODULE_ID, "violence");
+    this.scaleMulti = game.settings.get(MODULE_ID, "bloodsplatterScale");
+    this.wallsBlock = game.settings.get(MODULE_ID, "wallsBlockBlood");
+    this.inCombat = game.settings.get(MODULE_ID, "onlyInCombat");
+    this.cleanup = game.settings.get(MODULE_ID, "cleanup");
+    this.bloodTrail = game.settings.get(MODULE_ID, "enableBloodTrail");
     this.scaleMulti =
       (canvas.dimensions.size / 100) *
-      game.settings.get("splatter", "bloodsplatterScale");
+      game.settings.get(MODULE_ID, "bloodsplatterScale");
   }
 
   Cleanup() {
@@ -286,7 +284,7 @@ export class BloodSplatter {
   }
 
   static socketSplatFn({uuids}) {
-    if (!game.settings.get("splatter", "enableBloodsplatter")) return;
+    if (!game.settings.get(MODULE_ID, "enableBloodsplatter")) return;
     for (let uuid of uuids) {
       let token = fromUuidSync(uuid);
       token = token.object ?? token;
@@ -318,11 +316,11 @@ export class BloodSplatter {
     if (!actor) return false;
     const hpMax = BloodSplatter.getHpMax(actor);
     const hpVal = BloodSplatter.getHpVal(actor);
-    const useWounds = game.settings.get("splatter", "useWounds");
+    const useWounds = game.settings.get(MODULE_ID, "useWounds");
     const threshold = useWounds ? (100 * (hpMax - hpVal)) / hpMax : (100 * hpVal) / hpMax;
     if (
       threshold <=
-      game.settings.get("splatter", "bloodsplatterThreshold")
+      game.settings.get(MODULE_ID, "bloodsplatterThreshold")
     )
       return true;
     return false;
@@ -330,19 +328,19 @@ export class BloodSplatter {
   static getHpVal(actor) {
     return foundry.utils.getProperty(
       actor.system ?? actor,
-      game.settings.get("splatter", "currentHp")
+      game.settings.get(MODULE_ID, "currentHp")
     );
   }
   static getHpMax(actor) {
-    return foundry.utils.getProperty(actor.system ?? actor, game.settings.get("splatter", "maxHp"));
+    return foundry.utils.getProperty(actor.system ?? actor, game.settings.get(MODULE_ID, "maxHp"));
   }
   static getCreatureType(actorData) {
-    return foundry.utils.getProperty(actorData.system, game.settings.get("splatter", "creatureType")) ?? actorData.type;
+    return foundry.utils.getProperty(actorData.system, game.settings.get(MODULE_ID, "creatureType")) ?? actorData.type;
   }
   static getCreatureTypeCustom(actorData) {
     return foundry.utils.getProperty(
       actorData.system,
-      game.settings.get("splatter", "creatureTypeCustom")
+      game.settings.get(MODULE_ID, "creatureTypeCustom")
     );
   }
   static async saveBlood() {
@@ -405,7 +403,7 @@ export class BloodSplatter {
     }
   }
   static getImpactScale(actor, updates, diff){
-    const useWounds = game.settings.get("splatter", "useWounds")
+    const useWounds = game.settings.get(MODULE_ID, "useWounds")
     return useWounds ? BloodSplatter.getImpactScaleWounds(actor, updates, diff) : BloodSplatter.getImpactScaleStandard(actor, updates, diff);
   }
   static getImpactScaleStandard(actor, updates, diff) {
@@ -418,7 +416,7 @@ export class BloodSplatter {
     if (hpVal != undefined &&
       hpVal > oldHpVal &&
       (100 * hpVal) / hpMax <=
-      game.settings.get("splatter", "bloodsplatterThreshold")) {
+      game.settings.get(MODULE_ID, "bloodsplatterThreshold")) {
       return impactScale;
       } else {
         return false;
@@ -434,14 +432,14 @@ export class BloodSplatter {
     if (hpVal != undefined &&
       hpVal < oldHpVal &&
       (100 * (hpMax - hpVal)) / hpMax <=
-      game.settings.get("splatter", "bloodsplatterThreshold")) {
+      game.settings.get(MODULE_ID, "bloodsplatterThreshold")) {
       return impactScale;
       } else {
         return false;
       }
   }
   static executeSplat(token, impactScale) {
-    const delay = game.settings.get("splatter", "bloodsplatterDelay");
+    const delay = game.settings.get(MODULE_ID, "bloodsplatterDelay");
     setTimeout(function () {
       BloodSplatter.generateSplat(token, impactScale);
     }, delay);
